@@ -1285,14 +1285,19 @@ async function carregarCadastro() {
       const linhas = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
 
       var dados = [];
-      for (var i = 3; i < linhas.length; i++) {
-        var row = linhas[i];
-        if (!row || !row[0]) continue;
+for (var i = 3; i < linhas.length; i++) {
+  var row = linhas[i];
+  if (!row || !row[0]) continue;
 
-        var codigo = (row[0] || '').toString().trim();
-        if (!codigo || codigo === 'locacao') continue;
+  var codigo = (row[0] || '').toString().trim();
+  if (!codigo || codigo === 'locacao') continue;
 
-        var rua = (row[1] || '').toString().trim();
+  // Só inclui contratos ATIVOS (coluna DJ = índice 113)
+  var status = (row[113] || '').toString().trim().toUpperCase();
+  if (status !== 'ATIVO') continue;
+
+  var rua = (row[1] || '').toString().trim();
+
         var bairro = (row[2] || '').toString().trim();
         var municipioUf = (row[3] || '').toString().trim();
         var cep = (row[4] || '').toString().trim();
@@ -1468,6 +1473,47 @@ function converterDataFlexivel(dataTexto) {
 
   console.warn('Formato de data nao reconhecido:', dataTexto);
   return '';
+}
+
+function limparEndereco(texto) {
+  if (!texto) return '';
+  var limpo = texto.toString().replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+  // Extrai o CEP
+  var cepMatch = limpo.match(/CEP:?\s*(\d{5}-?\d{3})/i);
+  var cep = '';
+  if (cepMatch) {
+    cep = cepMatch[1];
+    if (cep.length === 8) cep = cep.substring(0, 5) + '-' + cep.substring(5);
+  }
+  // Remove o CEP do endereço
+  limpo = limpo.replace(/\.?\s*[-–—]?\s*CEP:?\s*\d{5}-?\d{3}/gi, '').trim();
+
+  // Remove ponto ou traço no final
+  limpo = limpo.replace(/[.\s]+$/, '').trim();
+  limpo = limpo.replace(/\s*[-–—]\s*$/, '').trim();
+
+  // Normaliza todos os tipos de traço para vírgula (para poder separar)
+  limpo = limpo.replace(/\s*[–—]\s*/g, ',');
+  limpo = limpo.replace(/\s+-\s+/g, ',');
+
+  // Divide por vírgula
+  var partes = limpo.split(',').map(function(p) { return p.trim(); }).filter(function(p) { return p; });
+
+  if (partes.length === 0) return cep ? 'CEP: ' + cep : '';
+  if (partes.length === 1) return cep ? partes[0] + '. CEP: ' + cep : partes[0];
+
+  // Primeiras 2 partes juntas com ", ", resto com " – "
+  var resultado = partes[0] + ', ' + partes[1];
+  for (var i = 2; i < partes.length; i++) {
+    resultado += ' – ' + partes[i];
+  }
+
+  if (cep) {
+    resultado += '. CEP: ' + cep;
+  }
+
+  return resultado;
 }
 
 function selecionarResultadoBusca(item) {
@@ -2065,7 +2111,8 @@ document.getElementById('busca_cadastro').addEventListener('input', async functi
   var filtrados = dados.filter(function(item) {
     return (item.endereco || '').toLowerCase().indexOf(termo) >= 0 ||
            (item.locatario1_nome || '').toLowerCase().indexOf(termo) >= 0 ||
-           (item.locatario2_nome || '').toLowerCase().indexOf(termo) >= 0;
+           (item.locatario2_nome || '').toLowerCase().indexOf(termo) >= 0 ||
+           (item.codigo || '').toLowerCase().indexOf(termo) >= 0;
   }).slice(0, 20);
   renderizarResultadosBusca(filtrados);
 });
