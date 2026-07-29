@@ -1342,7 +1342,6 @@ function converterDataParaISO(dataTexto) {
 }
 
 function selecionarResultadoBusca(item) {
-  // DEBUG temporário - veja no console (F12) o que chegou do cadastro
   console.log('DADOS DO CADASTRO:', {
     nome1: item.locatario1_nome,
     sexo1: item.locatario1_sexo,
@@ -1353,155 +1352,178 @@ function selecionarResultadoBusca(item) {
     nome2: item.locatario2_nome
   });
 
-  document.getElementById('endereco_imovel').value = item.endereco;
+  try { document.getElementById('endereco_imovel').value = item.endereco; } catch(e) { console.error('Erro endereço:', e); }
 
-  if (item.data_contrato) {
-    var dataISO = converterDataParaISO(item.data_contrato);
-    if (dataISO) {
-      document.getElementById('data_contrato').value = dataISO;
-      document.getElementById('sem_data_contrato').checked = false;
-      document.getElementById('data_contrato').disabled = false;
+  try {
+    if (item.data_contrato) {
+      var dataISO = converterDataParaISO(item.data_contrato);
+      if (dataISO) {
+        document.getElementById('data_contrato').value = dataISO;
+        document.getElementById('sem_data_contrato').checked = false;
+        document.getElementById('data_contrato').disabled = false;
+      }
     }
-  }
+  } catch(e) { console.error('Erro data contrato:', e); }
 
   // Locatário 1
-  if (item.locatario1_nome && item.locatario1_nome !== '—' && item.locatario1_nome !== '-') {
-    inquilinos = [];
-    proximoIdInquilino = 1;
-    adicionarInquilino();
-    var id = inquilinos[0];
+  try {
+    if (item.locatario1_nome && item.locatario1_nome !== '—' && item.locatario1_nome !== '-') {
+      inquilinos = [];
+      proximoIdInquilino = 1;
+      adicionarInquilino();
+      var id = inquilinos[0];
+      console.log('Inquilino 1 - ID:', id, 'Elemento nome:', document.getElementById('inq_' + id + '_nome'));
 
-    document.getElementById('inq_' + id + '_nome').value = tituloCase(item.locatario1_nome);
+      try { document.getElementById('inq_' + id + '_nome').value = tituloCase(item.locatario1_nome); } catch(e) { console.error('Erro nome1:', e); }
 
-    if (item.locatario1_sexo && item.locatario1_sexo !== '—') {
-      var sexo = mapearSexo(item.locatario1_sexo);
-      var radio = document.querySelector('input[name="inq_' + id + '_sexo"][value="' + sexo + '"]');
-      if (radio) {
-        radio.checked = true;
-        valorAnteriorRadio['inq_' + id + '_sexo'] = sexo;
-        radio.closest('.opcao').classList.add('marcada');
-      }
-    }
-
-    if (item.locatario1_estado_civil && item.locatario1_estado_civil !== '—') {
-      var ec = mapearEstadoCivilCadastro(item.locatario1_estado_civil);
-      if (ec) {
-        var radioEC = document.querySelector('input[name="inq_' + id + '_estado_civil"][value="' + ec + '"]');
-        if (radioEC) {
-          radioEC.checked = true;
-          valorAnteriorRadio['inq_' + id + '_estado_civil'] = ec;
-          radioEC.closest('.opcao').classList.add('marcada');
+      try {
+        if (item.locatario1_sexo && item.locatario1_sexo !== '—') {
+          var sexo = mapearSexo(item.locatario1_sexo);
+          var radio = document.querySelector('input[name="inq_' + id + '_sexo"][value="' + sexo + '"]');
+          if (radio) {
+            radio.checked = true;
+            valorAnteriorRadio['inq_' + id + '_sexo'] = sexo;
+            radio.closest('.opcao').classList.add('marcada');
+          }
         }
-      }
-    }
+      } catch(e) { console.error('Erro sexo1:', e); }
 
-    if (item.locatario1_profissao && item.locatario1_profissao !== '—' && item.locatario1_profissao !== '-') {
-      document.getElementById('inq_' + id + '_profissao').value = item.locatario1_profissao.toLowerCase();
-    }
-
-    var rg1Valor = item.locatario1_rg || '';
-    var rg1Upper = rg1Valor.toUpperCase().trim();
-    if (rg1Upper.indexOf('NAO TEM') >= 0 || rg1Upper.indexOf('NÃO TEM') >= 0) {
-      var chkSemRG1 = document.getElementById('inq_' + id + '_sem_rg');
-      if (chkSemRG1) {
-        chkSemRG1.checked = true;
-        toggleSemRG(id);
-      }
-    } else if (rg1Valor && rg1Valor !== '—' && rg1Valor !== '-') {
-      document.getElementById('inq_' + id + '_rg').value = rg1Valor;
-    }
-
-    if (item.locatario1_cpf && item.locatario1_cpf !== '—' && item.locatario1_cpf !== '-') {
-      var cpfInput1 = document.getElementById('inq_' + id + '_cpf');
-      cpfInput1.value = item.locatario1_cpf;
-      mascararCPF(cpfInput1);
-    }
-  }
-
-  // Locatário 2 — SÓ adiciona se qtd_locatarios NÃO for 1
-  var qtd = (item.qtd_locatarios || '').toString().trim();
-  var temApenas1 = qtd === '1' || qtd === '1.0' || qtd === 'um' || qtd === 'UM';
-
-  if (!temApenas1 && item.locatario2_nome && item.locatario2_nome !== '—' && item.locatario2_nome !== '-') {
-    adicionarInquilino();
-    var id2 = inquilinos[1];
-    if (id2) {
-      document.getElementById('inq_' + id2 + '_nome').value = tituloCase(item.locatario2_nome);
-
-      if (item.locatario2_sexo && item.locatario2_sexo !== '—') {
-        var sexo2 = mapearSexo(item.locatario2_sexo);
-        var radio2 = document.querySelector('input[name="inq_' + id2 + '_sexo"][value="' + sexo2 + '"]');
-        if (radio2) {
-          radio2.checked = true;
-          valorAnteriorRadio['inq_' + id2 + '_sexo'] = sexo2;
-          radio2.closest('.opcao').classList.add('marcada');
+      try {
+        if (item.locatario1_estado_civil && item.locatario1_estado_civil !== '—') {
+          var ec = mapearEstadoCivilCadastro(item.locatario1_estado_civil);
+          if (ec) {
+            var radioEC = document.querySelector('input[name="inq_' + id + '_estado_civil"][value="' + ec + '"]');
+            if (radioEC) {
+              radioEC.checked = true;
+              valorAnteriorRadio['inq_' + id + '_estado_civil'] = ec;
+              radioEC.closest('.opcao').classList.add('marcada');
+            }
+          }
         }
-      }
+      } catch(e) { console.error('Erro est_civil1:', e); }
 
-      if (item.locatario2_estado_civil && item.locatario2_estado_civil !== '—') {
-        var ec2 = mapearEstadoCivilCadastro(item.locatario2_estado_civil);
-        if (ec2) {
-          var radio2EC = document.querySelector('input[name="inq_' + id2 + '_estado_civil"][value="' + ec2 + '"]');
-          if (radio2EC) {
-            radio2EC.checked = true;
-            valorAnteriorRadio['inq_' + id2 + '_estado_civil'] = ec2;
-            radio2EC.closest('.opcao').classList.add('marcada');
+      try {
+        if (item.locatario1_profissao && item.locatario1_profissao !== '—' && item.locatario1_profissao !== '-') {
+          document.getElementById('inq_' + id + '_profissao').value = item.locatario1_profissao.toLowerCase();
+        }
+      } catch(e) { console.error('Erro profissao1:', e); }
+
+      try {
+        var rg1Valor = item.locatario1_rg || '';
+        var rg1Upper = rg1Valor.toUpperCase().trim();
+        if (rg1Upper.indexOf('NAO TEM') >= 0 || rg1Upper.indexOf('NÃO TEM') >= 0) {
+          var chkSemRG1 = document.getElementById('inq_' + id + '_sem_rg');
+          if (chkSemRG1) { chkSemRG1.checked = true; toggleSemRG(id); }
+        } else if (rg1Valor && rg1Valor !== '—' && rg1Valor !== '-') {
+          document.getElementById('inq_' + id + '_rg').value = rg1Valor;
+        }
+      } catch(e) { console.error('Erro rg1:', e); }
+
+      try {
+        if (item.locatario1_cpf && item.locatario1_cpf !== '—' && item.locatario1_cpf !== '-') {
+          var cpfInput1 = document.getElementById('inq_' + id + '_cpf');
+          cpfInput1.value = item.locatario1_cpf;
+          mascararCPF(cpfInput1);
+        }
+      } catch(e) { console.error('Erro cpf1:', e); }
+    }
+  } catch(e) { console.error('Erro geral inquilino1:', e); }
+
+  // Locatário 2 — SÓ se qtd_locatarios NÃO for 1
+  try {
+    var qtd = (item.qtd_locatarios || '').toString().trim();
+    var temApenas1 = qtd === '1' || qtd === '1.0' || qtd === 'um' || qtd === 'UM';
+
+    if (!temApenas1 && item.locatario2_nome && item.locatario2_nome !== '—' && item.locatario2_nome !== '-') {
+      adicionarInquilino();
+      var id2 = inquilinos[1];
+      console.log('Inquilino 2 - ID:', id2, 'Elemento nome:', document.getElementById('inq_' + id2 + '_nome'));
+      if (id2) {
+        try { document.getElementById('inq_' + id2 + '_nome').value = tituloCase(item.locatario2_nome); } catch(e) { console.error('Erro nome2:', e); }
+
+        try {
+          if (item.locatario2_sexo && item.locatario2_sexo !== '—') {
+            var sexo2 = mapearSexo(item.locatario2_sexo);
+            var radio2 = document.querySelector('input[name="inq_' + id2 + '_sexo"][value="' + sexo2 + '"]');
+            if (radio2) {
+              radio2.checked = true;
+              valorAnteriorRadio['inq_' + id2 + '_sexo'] = sexo2;
+              radio2.closest('.opcao').classList.add('marcada');
+            }
+          }
+        } catch(e) { console.error('Erro sexo2:', e); }
+
+        try {
+          if (item.locatario2_estado_civil && item.locatario2_estado_civil !== '—') {
+            var ec2 = mapearEstadoCivilCadastro(item.locatario2_estado_civil);
+            if (ec2) {
+              var radio2EC = document.querySelector('input[name="inq_' + id2 + '_estado_civil"][value="' + ec2 + '"]');
+              if (radio2EC) {
+                radio2EC.checked = true;
+                valorAnteriorRadio['inq_' + id2 + '_estado_civil'] = ec2;
+                radio2EC.closest('.opcao').classList.add('marcada');
+              }
+            }
+          }
+        } catch(e) { console.error('Erro est_civil2:', e); }
+
+        try {
+          if (item.locatario2_profissao && item.locatario2_profissao !== '—' && item.locatario2_profissao !== '-') {
+            document.getElementById('inq_' + id2 + '_profissao').value = item.locatario2_profissao.toLowerCase();
+          }
+        } catch(e) { console.error('Erro profissao2:', e); }
+
+        try {
+          var rg2Valor = item.locatario2_rg || '';
+          var rg2Upper = rg2Valor.toUpperCase().trim();
+          if (rg2Upper.indexOf('NAO TEM') >= 0 || rg2Upper.indexOf('NÃO TEM') >= 0) {
+            var chkSemRG2 = document.getElementById('inq_' + id2 + '_sem_rg');
+            if (chkSemRG2) { chkSemRG2.checked = true; toggleSemRG(id2); }
+          } else if (rg2Valor && rg2Valor !== '—' && rg2Valor !== '-') {
+            document.getElementById('inq_' + id2 + '_rg').value = rg2Valor;
+          }
+        } catch(e) { console.error('Erro rg2:', e); }
+
+        try {
+          if (item.locatario2_cpf && item.locatario2_cpf !== '—' && item.locatario2_cpf !== '-') {
+            var cpfInput2 = document.getElementById('inq_' + id2 + '_cpf');
+            cpfInput2.value = item.locatario2_cpf;
+            mascararCPF(cpfInput2);
+          }
+        } catch(e) { console.error('Erro cpf2:', e); }
+      }
+    }
+  } catch(e) { console.error('Erro geral inquilino2:', e); }
+
+  // Casados entre si
+  try {
+    if (item.casados) {
+      var casadosUpper = item.casados.toUpperCase().trim();
+      if (casadosUpper === 'SIM' || casadosUpper === 'S' || casadosUpper.indexOf('CASAD') >= 0) {
+        var chkCas = document.getElementById('casados_entre_si');
+        if (chkCas) { chkCas.checked = true; toggleCasadosEntreSi(); }
+        if (item.regime) {
+          var regime = mapearRegimeBens(item.regime);
+          var sel = document.getElementById('regime_bens');
+          if (sel) sel.value = regime;
+        }
+        if (item.data_casamento) {
+          var dataCas = converterDataParaISO(item.data_casamento);
+          if (dataCas) {
+            var p = dataCas.split('-');
+            document.getElementById('data_casamento').value = p[2] + '/' + p[1] + '/' + p[0];
           }
         }
       }
-
-      if (item.locatario2_profissao && item.locatario2_profissao !== '—' && item.locatario2_profissao !== '-') {
-        document.getElementById('inq_' + id2 + '_profissao').value = item.locatario2_profissao.toLowerCase();
-      }
-
-      var rg2Valor = item.locatario2_rg || '';
-      var rg2Upper = rg2Valor.toUpperCase().trim();
-      if (rg2Upper.indexOf('NAO TEM') >= 0 || rg2Upper.indexOf('NÃO TEM') >= 0) {
-        var chkSemRG2 = document.getElementById('inq_' + id2 + '_sem_rg');
-        if (chkSemRG2) {
-          chkSemRG2.checked = true;
-          toggleSemRG(id2);
-        }
-      } else if (rg2Valor && rg2Valor !== '—' && rg2Valor !== '-') {
-        document.getElementById('inq_' + id2 + '_rg').value = rg2Valor;
-      }
-
-      if (item.locatario2_cpf && item.locatario2_cpf !== '—' && item.locatario2_cpf !== '-') {
-        var cpfInput2 = document.getElementById('inq_' + id2 + '_cpf');
-        cpfInput2.value = item.locatario2_cpf;
-        mascararCPF(cpfInput2);
-      }
     }
-  }
+  } catch(e) { console.error('Erro casados:', e); }
 
-  // Casados entre si
-  if (item.casados) {
-    var casadosUpper = item.casados.toUpperCase().trim();
-    if (casadosUpper === 'SIM' || casadosUpper === 'S' || casadosUpper.indexOf('CASAD') >= 0) {
-      var chkCas = document.getElementById('casados_entre_si');
-      if (chkCas) {
-        chkCas.checked = true;
-        toggleCasadosEntreSi();
-      }
-      if (item.regime) {
-        var regime = mapearRegimeBens(item.regime);
-        var sel = document.getElementById('regime_bens');
-        if (sel) sel.value = regime;
-      }
-      if (item.data_casamento) {
-        var dataCas = converterDataParaISO(item.data_casamento);
-        if (dataCas) {
-          var p = dataCas.split('-');
-          document.getElementById('data_casamento').value = p[2] + '/' + p[1] + '/' + p[0];
-        }
-      }
-    }
-  }
-
-  var buscaInput = document.getElementById('busca_cadastro');
-  buscaInput.value = item.endereco;
-  document.getElementById('busca_cadastro_resultados').style.display = 'none';
-  atualizarPreview();
+  try {
+    var buscaInput = document.getElementById('busca_cadastro');
+    buscaInput.value = item.endereco;
+    document.getElementById('busca_cadastro_resultados').style.display = 'none';
+    atualizarPreview();
+  } catch(e) { console.error('Erro finalização:', e); }
 }
 
 async function baixarPDF() {
