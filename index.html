@@ -89,14 +89,17 @@ header .sub { color: #a8bce8; font-size: 0.75rem; font-weight: 300; }
 }
 .intro b { color: var(--primario); }
 
+/* ALTERAR .card */
 .card {
   background: var(--branco);
   border-radius: 14px;
   box-shadow: var(--sombra);
   border: 1px solid var(--fundo3);
   margin-bottom: 20px;
-  overflow: visible; /* ← ALTERADO de hidden para visible */
+  overflow: visible;  /* ← ALTERADO de hidden para visible */
 }
+
+/* ADICIONAR border-radius no .card-header e .card-body */
 .card-header {
   padding: 16px 22px;
   background: var(--fundo2);
@@ -104,12 +107,12 @@ header .sub { color: #a8bce8; font-size: 0.75rem; font-weight: 300; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-radius: 14px 14px 0 0; /* ← ADICIONADO */
+  border-radius: 14px 14px 0 0;  /* ← ADICIONADO */
 }
 .card-body {
   padding: 20px 22px;
-  border-radius: 0 0 14px 14px; /* ← ADICIONADO */
-  background: var(--branco); /* ← ADICIONADO para preservar visual */
+  border-radius: 0 0 14px 14px;  /* ← ADICIONADO */
+  background: var(--branco);      /* ← ADICIONADO */
 }
 .subbloco {
   border-top: 1px dashed var(--fundo3);
@@ -371,9 +374,9 @@ input:disabled { opacity: 0.5; background: #e8e8e8; cursor: not-allowed; }
   border: 1px solid var(--fundo3);
   border-radius: 8px;
   box-shadow: var(--sombra2);
-  z-index: 999;
-  max-height: 200px;
-  overflow-y: scroll;
+  z-index: 999;          /* ← AUMENTADO de 99 para 999 */
+  max-height: 420px;     /* ← AUMENTADO de 260px para 420px */
+  overflow-y: auto;
   margin-top: 2px;
 }
 .busca-resultado-item {
@@ -1214,7 +1217,6 @@ async function baixarPDFsemAssinatura() {
 async function carregarCadastro() {
   if (cadastroDados) return cadastroDados;
   if (cadastroCarregandoPromise) return cadastroCarregandoPromise;
-
   cadastroCarregandoPromise = (async () => {
     if (typeof XLSX === 'undefined') {
       cadastroDados = [];
@@ -1233,46 +1235,57 @@ async function carregarCadastro() {
       const dados = [];
       for (let i = 1; i < linhas.length; i++) {
         const row = linhas[i];
-if (!row || !row[0] || row[0] === 'locacao') continue;
-if ((!row[1] || row[1] === '—') && (!row[30] || row[30] === '—')) continue;
-const endereco = [
-  (row[1] || '').toString().trim(),   // rua
-  (row[2] || '').toString().trim(),   // bairro
-  (row[3] || '').toString().trim()    // municipio_uf
-].filter(v => v && v !== '—' && v !== '-').join(', ');
-        if (!endereco) continue;
+        if (!row || !row[0] || row[0] === 'locacao') continue;
+
+        // Pula linhas onde tanto o nome quanto a rua estão vazios
+        const nome = (row[3] || '').toString().trim();
+        const rua = (row[9] || '').toString().trim();
+        if ((!nome || nome === '—') && (!rua || rua === '—')) continue;
+
+        // Monta endereço: rua, bairro, municipio_uf, cep
+        const endereco = [
+          rua,
+          (row[10] || '').toString().trim(),   // bairro
+          (row[11] || '').toString().trim()     // municipio_uf
+        ].filter(v => v && v !== '—' && v !== '-').join(', ');
+
+        const cep = (row[12] || '').toString().trim();
+        const enderecoCompleto = cep && cep !== '—' ? endereco + ' — CEP: ' + cep : endereco;
+
+        if (!enderecoCompleto) continue;
+
         dados.push({
-          endereco: endereco,
-          locatario1_nome: (row[30] || '').toString().trim(),
-          locatario1_sexo: (row[29] || '').toString().trim(),
-          locatario1_estado_civil: (row[32] || '').toString().trim(),
-          locatario1_profissao: (row[33] || '').toString().trim(),
-          locatario1_rg: (row[34] || '').toString().trim(),
-          locatario1_cpf: (row[35] || '').toString().trim(),
-          locatario2_nome: (row[39] || '').toString().trim(),
-          locatario2_sexo: (row[38] || '').toString().trim(),
-          locatario2_estado_civil: (row[41] || '').toString().trim(),
-          locatario2_profissao: (row[42] || '').toString().trim(),
-          locatario2_rg: (row[43] || '').toString().trim(),
-          locatario2_cpf: (row[44] || '').toString().trim(),
-          casados: (row[51] || '').toString().trim(),
-          regime: (row[52] || '').toString().trim(),
-          data_casamento: (row[53] || '').toString().trim(),
-          data_contrato: (row[10] || '').toString().trim(),
-          codigo: (row[0] || '').toString().trim()
+          endereco: enderecoCompleto,
+          locatario1_nome: nome,
+          locatario1_sexo: (row[2] || '').toString().trim(),
+          locatario1_cpf: (row[4] || '').toString().trim(),
+          locatario1_rg: (row[5] || '').toString().trim(),
+          locatario1_profissao: (row[6] || '').toString().trim(),
+          locatario1_estado_civil: (row[7] || '').toString().trim(),
+          data_contrato: (row[8] || '').toString().trim(),
+          codigo: (row[0] || '').toString().trim(),
+          // Esta planilha não tem locatário 2 — deixamos vazio
+          locatario2_nome: '',
+          locatario2_sexo: '',
+          locatario2_estado_civil: '',
+          locatario2_profissao: '',
+          locatario2_rg: '',
+          locatario2_cpf: '',
+          casados: '',
+          regime: '',
+          data_casamento: ''
         });
       }
       cadastroDados = dados;
       return cadastroDados;
     } catch (e) {
+      console.error('Erro ao carregar cadastro:', e);
       cadastroDados = [];
       return cadastroDados;
     }
   })();
-
   return cadastroCarregandoPromise;
 }
-
 carregarCadastro(); // dispara carregamento em segundo plano
 
 function renderizarResultadosBusca(itens) {
@@ -1286,10 +1299,10 @@ function renderizarResultadosBusca(itens) {
       return '<div class="busca-resultado-item" data-idx="' + idx + '">' +
         '<strong>' + escaparHtml(item.endereco) + '</strong>' +
         (nomeExibicao ? '<br><span class="busca-resultado-sub">' + escaparHtml(nomeExibicao) + '</span>' : '') +
-      '</div>';
+        '</div>';
     }).join('');
   }
-  el.style.display = 'block';
+  el.style.display = 'block'; // ← ISTO ESTAVA FALTANDO
 }
 
 function mapearSexo(texto) {
@@ -1333,114 +1346,129 @@ function selecionarResultadoBusca(item) {
   document.getElementById('endereco_imovel').value = item.endereco;
 
   // Preenche data do contrato se disponível
-  if (item.data_contrato && item.data_contrato !== '—') {
+  if (item.data_contrato) {
     const dataISO = converterDataParaISO(item.data_contrato);
     if (dataISO) {
       document.getElementById('data_contrato').value = dataISO;
       document.getElementById('sem_data_contrato').checked = false;
+      document.getElementById('data_contrato').disabled = false;
     }
   }
 
-  // Limpa inquilinos e cria os novos
-  inquilinos = [];
-  proximoIdInquilino = 1;
-
-  // ── Locatário 1 ──
-  if (item.locatario1_nome && item.locatario1_nome !== '—') {
-    adicionarInquilino(); // cria inquilino 1 e renderiza
+  // Locatário 1
+  if (item.locatario1_nome) {
+    inquilinos = [];
+    proximoIdInquilino = 1;
+    adicionarInquilino();
     const id = inquilinos[0];
 
     document.getElementById('inq_' + id + '_nome').value = tituloCase(item.locatario1_nome);
 
-    // Sexo
-    const sexo = item.locatario1_sexo && item.locatario1_sexo.toLowerCase().includes('feminino') ? 'F' : 'M';
-    const radioSexo = document.querySelector('input[name="inq_' + id + '_sexo"][value="' + sexo + '"]');
-    if (radioSexo) {
-      radioSexo.checked = true;
-      valorAnteriorRadio['inq_' + id + '_sexo'] = sexo;
-      radioSexo.closest('.opcao').classList.add('marcada');
+    if (item.locatario1_sexo) {
+      const sexo = mapearSexo(item.locatario1_sexo);
+      const radio = document.querySelector('input[name="inq_' + id + '_sexo"][value="' + sexo + '"]');
+      if (radio) {
+        radio.checked = true;
+        valorAnteriorRadio['inq_' + id + '_sexo'] = sexo;
+        radio.closest('.opcao').classList.add('marcada');
+      }
     }
 
-    // Estado civil
-    if (item.locatario1_estado_civil && item.locatario1_estado_civil !== '—') {
+    if (item.locatario1_estado_civil) {
       const ec = mapearEstadoCivilCadastro(item.locatario1_estado_civil);
       if (ec) {
-        const radioEC = document.querySelector('input[name="inq_' + id + '_estado_civil"][value="' + ec + '"]');
-        if (radioEC) {
-          radioEC.checked = true;
+        const radio = document.querySelector('input[name="inq_' + id + '_estado_civil"][value="' + ec + '"]');
+        if (radio) {
+          radio.checked = true;
           valorAnteriorRadio['inq_' + id + '_estado_civil'] = ec;
-          radioEC.closest('.opcao').classList.add('marcada');
+          radio.closest('.opcao').classList.add('marcada');
         }
       }
     }
 
-    // Profissão, RG, CPF
-    if (item.locatario1_profissao && item.locatario1_profissao !== '—')
+    if (item.locatario1_profissao && item.locatario1_profissao !== '—') {
       document.getElementById('inq_' + id + '_profissao').value = item.locatario1_profissao.toLowerCase();
-    if (item.locatario1_rg && item.locatario1_rg !== '—')
+    }
+
+    if (item.locatario1_rg && item.locatario1_rg !== '—') {
       document.getElementById('inq_' + id + '_rg').value = item.locatario1_rg;
-    if (item.locatario1_cpf && item.locatario1_cpf !== '—')
-      document.getElementById('inq_' + id + '_cpf').value = item.locatario1_cpf;
+    }
+
+    if (item.locatario1_cpf && item.locatario1_cpf !== '—') {
+      const cpfInput = document.getElementById('inq_' + id + '_cpf');
+      cpfInput.value = item.locatario1_cpf;
+      mascararCPF(cpfInput);
+    }
   }
 
-  // ── Locatário 2 ──
+  // Locatário 2 (se existir na planilha — nesta estrutura não existe)
   if (item.locatario2_nome && item.locatario2_nome !== '—' && item.locatario2_nome !== '-') {
     adicionarInquilino();
     const id2 = inquilinos[1];
+    if (id2) {
+      document.getElementById('inq_' + id2 + '_nome').value = tituloCase(item.locatario2_nome);
 
-    document.getElementById('inq_' + id2 + '_nome').value = tituloCase(item.locatario2_nome);
-
-    const sexo2 = item.locatario2_sexo && item.locatario2_sexo.toLowerCase().includes('feminino') ? 'F' : 'M';
-    const radioSexo2 = document.querySelector('input[name="inq_' + id2 + '_sexo"][value="' + sexo2 + '"]');
-    if (radioSexo2) {
-      radioSexo2.checked = true;
-      valorAnteriorRadio['inq_' + id2 + '_sexo'] = sexo2;
-      radioSexo2.closest('.opcao').classList.add('marcada');
-    }
-
-    if (item.locatario2_estado_civil && item.locatario2_estado_civil !== '—') {
-      const ec2 = mapearEstadoCivilCadastro(item.locatario2_estado_civil);
-      if (ec2) {
-        const radioEC2 = document.querySelector('input[name="inq_' + id2 + '_estado_civil"][value="' + ec2 + '"]');
-        if (radioEC2) {
-          radioEC2.checked = true;
-          valorAnteriorRadio['inq_' + id2 + '_estado_civil'] = ec2;
-          radioEC2.closest('.opcao').classList.add('marcada');
+      if (item.locatario2_sexo) {
+        const sexo = mapearSexo(item.locatario2_sexo);
+        const radio = document.querySelector('input[name="inq_' + id2 + '_sexo"][value="' + sexo + '"]');
+        if (radio) {
+          radio.checked = true;
+          valorAnteriorRadio['inq_' + id2 + '_sexo'] = sexo;
+          radio.closest('.opcao').classList.add('marcada');
         }
       }
-    }
 
-    if (item.locatario2_profissao && item.locatario2_profissao !== '—')
-      document.getElementById('inq_' + id2 + '_profissao').value = item.locatario2_profissao.toLowerCase();
-    if (item.locatario2_rg && item.locatario2_rg !== '—')
-      document.getElementById('inq_' + id2 + '_rg').value = item.locatario2_rg;
-    if (item.locatario2_cpf && item.locatario2_cpf !== '—')
-      document.getElementById('inq_' + id2 + '_cpf').value = item.locatario2_cpf;
-
-    // Casados entre si?
-    if (item.casados && item.casados.toLowerCase() === 'sim') {
-      const chkCasados = document.getElementById('casados_entre_si');
-      if (chkCasados) {
-        chkCasados.checked = true;
-        toggleCasadosEntreSi();
-        if (item.regime && item.regime !== '—')
-          document.getElementById('regime_bens').value = mapearRegimeBens(item.regime);
-        if (item.data_casamento && item.data_casamento !== '—') {
-          const dataISO = converterDataParaISO(item.data_casamento);
-          if (dataISO) {
-            const p = dataISO.split('-');
-            document.getElementById('data_casamento').value = p[2] + '/' + p[1] + '/' + p[0];
+      if (item.locatario2_estado_civil) {
+        const ec2 = mapearEstadoCivilCadastro(item.locatario2_estado_civil);
+        if (ec2) {
+          const radio2 = document.querySelector('input[name="inq_' + id2 + '_estado_civil"][value="' + ec2 + '"]');
+          if (radio2) {
+            radio2.checked = true;
+            valorAnteriorRadio['inq_' + id2 + '_estado_civil'] = ec2;
+            radio2.closest('.opcao').classList.add('marcada');
           }
         }
+      }
+
+      if (item.locatario2_profissao && item.locatario2_profissao !== '—') {
+        document.getElementById('inq_' + id2 + '_profissao').value = item.locatario2_profissao.toLowerCase();
+      }
+      if (item.locatario2_rg && item.locatario2_rg !== '—') {
+        document.getElementById('inq_' + id2 + '_rg').value = item.locatario2_rg;
+      }
+      if (item.locatario2_cpf && item.locatario2_cpf !== '—') {
+        const cpfInput2 = document.getElementById('inq_' + id2 + '_cpf');
+        cpfInput2.value = item.locatario2_cpf;
+        mascararCPF(cpfInput2);
       }
     }
   }
 
-  // Fecha dropdown
+  // Casados entre si
+  if (item.casados && (item.casados === 'SIM' || item.casados.toUpperCase().includes('S'))) {
+    const chk = document.getElementById('casados_entre_si');
+    if (chk) {
+      chk.checked = true;
+      toggleCasadosEntreSi();
+    }
+    if (item.regime) {
+      const regime = mapearRegimeBens(item.regime);
+      const sel = document.getElementById('regime_bens');
+      if (sel) sel.value = regime;
+    }
+    if (item.data_casamento) {
+      const dataCasConvertida = converterDataParaISO(item.data_casamento);
+      if (dataCasConvertida) {
+        const partes = dataCasConvertida.split('-');
+        document.getElementById('data_casamento').value = partes[2] + '/' + partes[1] + '/' + partes[0];
+      }
+    }
+  }
+
+  // Fecha resultados
   const buscaInput = document.getElementById('busca_cadastro');
   buscaInput.value = item.endereco;
   document.getElementById('busca_cadastro_resultados').style.display = 'none';
-
   atualizarPreview();
 }
 async function baixarPDF() {
@@ -1842,12 +1870,23 @@ document.getElementById('busca_cadastro').addEventListener('input', async functi
   const termo = this.value.trim().toLowerCase();
   const resultadosEl = document.getElementById('busca_cadastro_resultados');
   if (!termo) { resultadosEl.style.display = 'none'; return; }
+
+  // Mostra indicador de carregamento
+  resultadosEl.innerHTML = '<div class="busca-resultado-vazio">Buscando...</div>';
+  resultadosEl.style.display = 'block';
+
   const dados = await carregarCadastro();
+
+  if (!dados || dados.length === 0) {
+    resultadosEl.innerHTML = '<div class="busca-resultado-vazio">Não foi possível carregar o cadastro.</div>';
+    return;
+  }
+
   const filtrados = dados.filter(item =>
     item.endereco.toLowerCase().includes(termo) ||
     item.locatario1_nome.toLowerCase().includes(termo) ||
     item.locatario2_nome.toLowerCase().includes(termo)
-  ).slice(0, 8);
+  ).slice(0, 20);  /* ← AUMENTADO de 8 para 20 */
   renderizarResultadosBusca(filtrados);
 });
 
